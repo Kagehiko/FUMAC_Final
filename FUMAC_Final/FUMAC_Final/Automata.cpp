@@ -30,6 +30,19 @@ std::vector<std::string> split(const std::string &str, char marker) {
 	return output_vect;
 }
 
+//Returns true if a state exists and puts in "pos" the position of the state in the state_names vector
+bool doesStringExistInVector(std::vector<std::string> str_vector, std::string str, int* pos) {
+	int i;
+
+	for (i = 0; i != str_vector.size(); i++) {
+		if (str_vector.at(i) == str) {
+			*pos = i;
+			return true;
+		}
+	}
+	return false;
+}
+
 //Parser for automata loading. Allows for non-compliant state and event names
 bool Automata::loadFromFile(std::string path, std::ostream& stream) {
 	Parser_state_enum parser_state = eNOSTATE;
@@ -108,7 +121,7 @@ bool Automata::loadFromFile(std::string path, std::ostream& stream) {
 				}
 
 				//Check if first substring matches a known state
-				if ( !(this->doesStringExistInVector(state_names, transition_str_vector.at(0), &first_state)) ) {
+				if ( !(doesStringExistInVector(state_names, transition_str_vector.at(0), &first_state)) ) {
 					stream << "State " << transition_str_vector.at(0) << " does not match any known states (line " << line_number << ")" << std::endl;
 					//Delete current automata data and create new one. This resets all data and ensures that the already loaded data cannot be used.
 					*this = Automata();
@@ -116,24 +129,26 @@ bool Automata::loadFromFile(std::string path, std::ostream& stream) {
 				}
 
 				//Check if second substring matches a known event
-				if (!(this->doesStringExistInVector(events, transition_str_vector.at(1), &event_pos))) {
+				if (!(doesStringExistInVector(events, transition_str_vector.at(1), &event_pos))) {
 					stream << "Event " << transition_str_vector.at(1) << " does not match any known events (line " << line_number << ")" << std::endl;
 					*this = Automata();
 					return false;
 				}
 
 				//Check if third substring matches a known state
-				if ( !(this->doesStringExistInVector(state_names, transition_str_vector.at(2), &second_state)) ) {
+				if ( !(doesStringExistInVector(state_names, transition_str_vector.at(2), &second_state)) ) {
 					stream << "State " << transition_str_vector.at(2) << " does not match any known states (line " << line_number << ")" << std::endl;
 					*this = Automata();
 					return false;
 				}
 
+				transitions[{first_state, transition_str_vector.at(1)}].push_back(second_state);
+
 			}
 			break;
 
 		case eINITIAL:
-			if (this->doesStringExistInVector(state_names, line, &initial_state)) {
+			if (doesStringExistInVector(state_names, line, &initial_state)) {
 				got_initial_state = true;
 				parser_state = eAFTER_INITIAL;
 			} else {
@@ -148,7 +163,7 @@ bool Automata::loadFromFile(std::string path, std::ostream& stream) {
 			//Keep "pos" scope inside these curly brackets
 			{
 				int pos=0;
-				if (this->doesStringExistInVector(state_names, line,&pos)) {
+				if (doesStringExistInVector(state_names, line, &pos)) {
 					marked_states.push_back(pos);
 					got_marker_state = true;
 				} else {
@@ -212,6 +227,30 @@ void Automata::printAutomataInfo(std::ostream& stream) {
 		stream << *it << std::endl;
 	}
 
+	stream << "Transitions:" << std::endl;
+	//Go through all states
+	for (int i = 0; i != state_names.size(); i++) {
+		//Go through all events for that state
+		for (int k = 0; k != events.size(); k++) {
+			//Check if a vector for this state and event exists
+			if (transitions.count({ i,events.at(k) })) {
+				//Get an iterator for the vector that has all the possible states for this "state i" and "event k" pair
+				std::vector<int>::iterator it = transitions[{i, events.at(k)}].begin();
+
+				stream << "f(" << state_names.at(i) << "," << events.at(k) << ") = {" << state_names.at(*it);
+				it++;
+				//If there is more than 1 transition for this state and event, go through all of them
+				while(it != transitions[{i, events.at(k)}].end()){
+					stream << "," << state_names.at(*it);
+					it++;
+				}
+
+				stream << "}" << std::endl;
+			
+			}
+		}
+	}
+
 	stream << "Initial state: " << std::endl << state_names.at(initial_state) << std::endl;
 
 	stream << "Marked states:" << std::endl;
@@ -221,15 +260,47 @@ void Automata::printAutomataInfo(std::ostream& stream) {
 
 }
 
-//Returns true if a state exists and puts in "pos" the position of the state in the state_names vector
-bool Automata::doesStringExistInVector(std::vector<std::string> str_vector, std::string str, int* pos) {
-	int i;
+std::vector<bool> Automata::goThroughAccessibleStates(std::vector<bool> accessible_states, int state) {
 
-	for (i = 0; i != str_vector.size(); i++) {
-		if (str_vector.at(i) == str) {
-			*pos = i;
-			return true;
+	//If a function call was made for this state, then the state is accessible
+	accessible_states.at(state) = true;
+
+	for (int i = 0; i != events.size(); i++) {
+		if (transitions.count({ state,events.at(i) })) {
+			//If a transition for this event exists, do recursive calls for each state that the event leads to
+			for (std::vector<int>::iterator it = transitions[{state, events.at(i)}].begin(); it != transitions[{state, events.at(i)}].end(); ++it) {
+				
+				//Check if we already went into this state
+				if (accessible_states.at(*it) == true) {
+					continue;
+				} else {
+					accessible_states = goThroughAccessibleStates(accessible_states, *it);
+				}
+			}
 		}
 	}
-	return false;
+
+	return accessible_states;
+}
+
+//WIP
+void Automata::removeNonAccessibleStates() {
+
+	//Each position corresponds to the state index, and a 1 indicates that the state is accessible.
+	std::vector<bool> accessible_states;
+
+	for (int i = 0; i != state_names.size(); i++) {
+		accessible_states.push_back(false);
+	}
+
+	accessible_states = goThroughAccessibleStates(accessible_states, initial_state);
+
+	std::cout << "Accessible states:" << std::endl;
+
+	for (int i = 0; i != accessible_states.size() ; i++ ) {
+		if (accessible_states.at(i) == true) {
+			std::cout << state_names.at(i) << std::endl;
+		}
+	}
+
 }
