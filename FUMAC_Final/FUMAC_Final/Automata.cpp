@@ -265,12 +265,15 @@ std::vector<bool> Automata::goThroughAccessibleStates(std::vector<bool> accessib
 	//If a function call was made for this state, then the state is accessible
 	accessible_states.at(state) = true;
 
+	//Iterate through all events
 	for (int i = 0; i != events.size(); i++) {
+
+		//If a transition for this event exists, let's go through all possible states where this transition leads to
 		if (transitions.count({ state,events.at(i) })) {
-			//If a transition for this event exists, do recursive calls for each state that the event leads to
+			
 			for (std::vector<int>::iterator it = transitions[{state, events.at(i)}].begin(); it != transitions[{state, events.at(i)}].end(); ++it) {
 				
-				//Check if we already went into this state
+				//Check if we already went into this state. If so, ignore this state, else go through all of the acessible states of the new state 
 				if (accessible_states.at(*it) == true) {
 					continue;
 				} else {
@@ -278,12 +281,12 @@ std::vector<bool> Automata::goThroughAccessibleStates(std::vector<bool> accessib
 				}
 			}
 		}
+
 	}
 
 	return accessible_states;
 }
 
-//WIP
 void Automata::removeNonAccessibleStates() {
 
 	//Each position corresponds to the state index, and a 1 indicates that the state is accessible.
