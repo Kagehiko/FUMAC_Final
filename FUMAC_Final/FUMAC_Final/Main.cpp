@@ -14,13 +14,11 @@ int main() {
 
 	my_automata.printAutomataInfo(consoleOutput);
 
-	my_automata.removeNonAccessibleStates();
+	my_automata.removeNonAccessibleStates(consoleOutput);
 
-	//consoleOutput <<"------------------------"<< std::endl;
+	my_automata.printAutomataInfo(consoleOutput);
 
-	//my_automata.printAutomataInfo(consoleOutput);
-
-	//std::cout << consoleOutput.str();
+	std::cout << consoleOutput.str();
 
 	std::cin.get();
 	return 0;
