@@ -204,7 +204,27 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 		return false;
 	}
 
+	//Check if at least one marked state is accessible
+	std::vector<bool> accessible_states(state_names.size(),false);
+	bool one_marked_state_is_accessible = false;
+
+	accessible_states = goThroughAccessibleStates(accessible_states,initial_state);
+
+	for (int i = 0; i != marked_states.size(); i++) {
+		if (accessible_states.at(marked_states.at(i)) == true) {
+			one_marked_state_is_accessible = true;
+			break;
+		}
+	}
+
+	if (one_marked_state_is_accessible == false) {
+		output_stream << "Error: At least one marked state must be accessible" << std::endl;
+		clearAutomata();
+		return false;
+	}
+
 	output_stream << "Parse successful" << std::endl;
+	automata_has_data = true;
 
 	return true;
 }
@@ -348,12 +368,12 @@ std::vector<bool> Automata::goThroughAccessibleStates(std::vector<bool> accessib
 //Deletes all states marked as "false" in the "states_to_keep" argument. The second argument returns parser messages
 bool Automata::keepStates(std::vector<bool> states_to_keep, std::ostream& stream) {
 
-	//Create a stringstream and write everything in the standard file format
+	//Create a stringstream and copy only the relevant states to it
 	std::stringstream newAutomataInfo;
 
 	newAutomataInfo << "STATES\r\n";
 
-	//Save only the states marked as true
+	//Copy only the states marked as true
 	for (int i = 0; i != state_names.size(); i++) {
 		if (states_to_keep.at(i) == true) {
 			newAutomataInfo << state_names.at(i) << "\r\n";
@@ -382,7 +402,6 @@ bool Automata::keepStates(std::vector<bool> states_to_keep, std::ostream& stream
 						}
 					}
 				}
-
 			}
 		}
 	}
@@ -409,12 +428,12 @@ bool Automata::keepStates(std::vector<bool> states_to_keep, std::ostream& stream
 //Removes all non-accessible states from automata
 void Automata::removeNonAccessibleStates(std::ostream& stream) {
 
-	//Each position corresponds to the state index, and a 1 indicates that the state is accessible.
-	std::vector<bool> accessible_states;
-
-	for (int i = 0; i != state_names.size(); i++) {
-		accessible_states.push_back(false);
+	if (automata_has_data == false) {
+		return;
 	}
+
+	//Each position corresponds to the state index, and a 1 indicates that the state is accessible.
+	std::vector<bool> accessible_states(state_names.size(), false);
 
 	accessible_states = goThroughAccessibleStates(accessible_states, initial_state);
 
@@ -436,4 +455,35 @@ void Automata::removeNonAccessibleStates(std::ostream& stream) {
 	stream << "Deleting all non-accessible states..." << std::endl;
 
 	keepStates(accessible_states, stream);
+}
+
+//WIP
+//Removes all non-coaccessible states from automata
+void Automata::removeNonCoAccessibleStates(std::ostream& stream) {
+	std::vector<bool> co_accessible_states(state_names.size(), false);
+
+	if (automata_has_data == false) {
+		return;
+	}
+
+	//WIP
+
+	stream << "Co-accessible states: {";
+
+	bool hasOneState = false;
+
+	for (int i = 0; i != co_accessible_states.size(); i++) {
+		if (co_accessible_states.at(i) == true) {
+			if (hasOneState == true) {
+				stream << ",";
+			}
+			stream << state_names.at(i);
+			hasOneState = true;
+		}
+	}
+
+	stream << "}" << std::endl;
+	stream << "Deleting all non-co-accessible states..." << std::endl;
+
+	keepStates(co_accessible_states, stream);
 }

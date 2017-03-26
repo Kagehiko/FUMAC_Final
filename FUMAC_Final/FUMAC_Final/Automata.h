@@ -9,12 +9,16 @@ class Automata {
 		bool loadFromFile(std::string path, std::ostream& stream);
 		void printAutomataInfo(std::ostream& stream);
 		void removeNonAccessibleStates(std::ostream& stream);
+		void removeNonCoAccessibleStates(std::ostream& stream);
 
 	private:
 		void clearAutomata();
 		bool keepStates(std::vector<bool> states_to_keep, std::ostream& stream);
 		bool parseStream(std::istream& input_stream, std::ostream& output_stream);
 		std::vector<bool> goThroughAccessibleStates(std::vector<bool> accessible_states, int state);
+		
+		//States are stored as ints that represent their index in the state_names vector
+		bool automata_has_data = false;
 		std::vector<std::string> state_names;
 		int initial_state;
 		std::vector<int> marked_states;
