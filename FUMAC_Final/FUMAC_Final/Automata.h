@@ -12,6 +12,7 @@ class Automata {
 		void removeNonCoAccessibleStates(std::ostream& stream);
 
 	private:
+		bool CheckCoAc(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path);
 		void clearAutomata();
 		bool keepStates(std::vector<bool> states_to_keep, std::ostream& stream);
 		bool parseStream(std::istream& input_stream, std::ostream& output_stream);

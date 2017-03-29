@@ -12,13 +12,17 @@ int main() {
 	//my_automata.loadFromFile("C:/Users/Utilizador/Source/Repos/FUMAC_Final/FUMAC_Final/Debug/Example.aut", consoleOutput);
 	my_automata.loadFromFile("C:/Users/Chi/Source/Repos/FUMAC_Final/FUMAC_Final/x64/Debug/Example.aut", std::cout);
 
-	my_automata.printAutomataInfo(consoleOutput);
+	my_automata.printAutomataInfo(std::cout);
 
-	my_automata.removeNonAccessibleStates(consoleOutput);
+	//my_automata.removeNonAccessibleStates(consoleOutput);
 
-	my_automata.printAutomataInfo(consoleOutput);
+	//my_automata.printAutomataInfo(consoleOutput);
 
-	std::cout << consoleOutput.str();
+	my_automata.removeNonCoAccessibleStates(std::cout);
+
+	my_automata.printAutomataInfo(std::cout);
+
+	//std::cout << consoleOutput.str();
 
 	std::cin.get();
 	return 0;
