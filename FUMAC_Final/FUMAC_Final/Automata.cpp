@@ -223,6 +223,22 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 		return false;
 	}
 
+	/*
+	bool delete_event = true;
+	//Delete unused events
+	for (int i = 0; i != events.size(); i++) {
+		//Go thorugh all states and see if the event is used
+		for (int k = 0; k != state_names.size(); k++) {
+			if (transitions.count({ k,events.at(i) }) == 1) {
+				delete_event = false;
+				break;
+			}
+		}
+		if (delete_event == true) {
+
+		}
+	}
+	*/
 	output_stream << "Parse successful" << std::endl;
 	automata_has_data = true;
 
@@ -463,13 +479,13 @@ bool Automata::CheckCoAc(int state,std::vector<bool>& coaccessible_states, std::
 	//Note: yes, you could make all marked states in the "result_is_known" and "coaccessible_states" vectors true
 	//but this check allows for calling this recursive function without having to set up the vectors
 	if (std::find(marked_states.begin(), marked_states.end(), state) != marked_states.end()) {
-		std::cout << state_names.at(state) << " is marked!" << std::endl;
+		D(std::cout << state_names.at(state) << " is marked!" << std::endl);
 		coaccessible_states.at(state) = true;
 		result_is_known.at(state) = true;
 		return true;
 	}
 
-	std::cout << "Checking state " << state_names.at(state) << std::endl;
+	D(std::cout << "Checking state " << state_names.at(state) << std::endl);
 
 	//If this state needs testing, then we this state to our "path"
 	//This will prevent loops from happening, since we will not recursively call this function
@@ -479,52 +495,52 @@ bool Automata::CheckCoAc(int state,std::vector<bool>& coaccessible_states, std::
 	//Go through all events for this state and follow the path to know if it leads to a coaccessible state
 	for (int i = 0; i != events.size(); i++) {
 		if (transitions.count({state,events.at(i)}) == 1) {
-			std::cout << "There are transitions for " << state_names.at(state) << " for the event " << events.at(i) << std::endl;
+			D(std::cout << "There are transitions for " << state_names.at(state) << " for the event " << events.at(i) << std::endl);
 			//If there are any transitions for this state, then let's go through all of them
 			for (std::vector<int>::iterator it = transitions[{state, events.at(i)}].begin(); it != transitions[{state, events.at(i)}].end(); ++it) {
-				std::cout << "Checking transition to " << state_names.at(*it) << std::endl;
+				D(std::cout << "Checking transition to " << state_names.at(*it) << std::endl);
 				//First let's check if we know anything about the next state
 				if (result_is_known.at(*it) == true) {
-					std::cout << "I know the result for " << state_names.at(*it) <<": ";
+					D(std::cout << "I know the result for " << state_names.at(*it) <<": ");
 					//If the state where we want to go to is coaccessible, then we known that this one is too and we don't need any further checks
 					if (coaccessible_states.at(*it) == true) {
-						std::cout << "it is coaccessible! " << state_names.at(state) << " is coaccessible." << std::endl;
+						D(std::cout << "it is coaccessible! " << state_names.at(state) << " is coaccessible." << std::endl);
 						coaccessible_states.at(state) = true;
 						result_is_known.at(state) = true;
 						return true;
 					} else {
 						//If we already known that the next state leads nowhere, then we continue searching the transitions that this event leads to
-						std::cout << "it is NOT coaccessible!" << std::endl;
+						D(std::cout << "it is NOT coaccessible!" << std::endl);
 						continue;
 					}
 				} else if(std::find(path.begin(), path.end(), *it) != path.end()){
 					//If we already went into this "*it" state and we have no information on it, we've hit a loop and can't do anything about it
-					std::cout << state_names.at(*it) << " belongs to the path I've taken. I'll ignore this state." << std::endl;
+					D(std::cout << state_names.at(*it) << " belongs to the path I've taken. I'll ignore this state." << std::endl);
 					continue;
 				} else {
-					std::cout << "I have no info on " << state_names.at(*it) << ". Let's use recursion to see where it leads..." << std::endl;
+					D(std::cout << "I have no info on " << state_names.at(*it) << ". Let's use recursion to see where it leads..." << std::endl);
 					//If we don't have any information on the next state, then get that information
 					if (CheckCoAc(*it, coaccessible_states, result_is_known, path) ) {
-						std::cout << state_names.at(*it) << " lead me to a coaccessible state." << state_names.at(state) << " is coaccessible!" << std::endl;
+						D(std::cout << state_names.at(*it) << " lead me to a coaccessible state." << state_names.at(state) << " is coaccessible!" << std::endl);
 						//It seems that this "*it" state is coaccessible, so this one also is
 						coaccessible_states.at(state) = true;
 						result_is_known.at(state) = true;
 						return true;
 					}
-					std::cout << state_names.at(*it) << " lead me to a non-coaccessible state. Let's continue checking." << std::endl;
+					D(std::cout << state_names.at(*it) << " lead me to a non-coaccessible state. Let's continue checking." << std::endl);
 				}
 			}
 		}
 	}
 
-	std::cout << "No " << state_names.at(state) << " transition leads to a coaccessible state. " << state_names.at(state) << "is not coaccessible." << std::endl;
+	D(std::cout << "No " << state_names.at(state) << " transition leads to a coaccessible state. " << state_names.at(state) << "is not coaccessible." << std::endl);
 	result_is_known.at(state) = true;
 	//If the code gets here, we went through all possible transitions for this state and no one lead us to a coaccessible state, so this state is not coaccessible
 	return false;
 }
 
 //Removes all non-coaccessible states from automata
-void Automata::removeNonCoAccessibleStates(std::ostream& stream) {
+void Automata::removeNonCoaccessibleStates(std::ostream& stream) {
 
 	std::vector<bool> coaccessible_states(state_names.size(), false);
 	std::vector<bool> result_is_known(state_names.size(), false);
@@ -542,8 +558,7 @@ void Automata::removeNonCoAccessibleStates(std::ostream& stream) {
 		}
 	}
 
-
-	stream << std::endl << "Co-accessible states: {";
+	stream << std::endl << "Coaccessible states: {";
 
 	bool hasOneState = false;
 
@@ -558,7 +573,12 @@ void Automata::removeNonCoAccessibleStates(std::ostream& stream) {
 	}
 
 	stream << "}" << std::endl;
-	stream << "Deleting all non-co-accessible states..." << std::endl;
+	stream << "Deleting all non-coaccessible states..." << std::endl;
 
 	keepStates(coaccessible_states, stream);
+}
+
+void Automata::trim(std::ostream& stream) {
+	this->removeNonAccessibleStates(stream);
+	this->removeNonCoaccessibleStates(stream);
 }

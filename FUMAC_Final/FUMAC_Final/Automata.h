@@ -4,12 +4,19 @@
 #include <vector>
 #include <map>
 
+#ifdef DEBUG_BUILD
+#define D(x) x
+#else
+#define D(x)
+#endif
+
 class Automata {
 	public:
 		bool loadFromFile(std::string path, std::ostream& stream);
 		void printAutomataInfo(std::ostream& stream);
 		void removeNonAccessibleStates(std::ostream& stream);
-		void removeNonCoAccessibleStates(std::ostream& stream);
+		void removeNonCoaccessibleStates(std::ostream& stream);
+		void trim(std::ostream& stream);
 
 	private:
 		bool CheckCoAc(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path);
