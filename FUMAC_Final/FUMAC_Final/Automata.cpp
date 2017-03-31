@@ -223,22 +223,28 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 		return false;
 	}
 
-	/*
+	
 	bool delete_event = true;
 	//Delete unused events
-	for (int i = 0; i != events.size(); i++) {
+	for (std::vector<std::string>::iterator it = events.begin(); it != events.end(); ++it) {
+		//Reset variable for each run
+		delete_event = true;
 		//Go thorugh all states and see if the event is used
 		for (int k = 0; k != state_names.size(); k++) {
-			if (transitions.count({ k,events.at(i) }) == 1) {
+			if (transitions.count({k,*it}) == 1) {
 				delete_event = false;
 				break;
 			}
 		}
 		if (delete_event == true) {
-
+			std::cout << "Deleting unused event " << *it << std::endl;
+			events.erase(it);
+			std::cout << "Deleted event" << std::endl;
+			//Fix iterator to point to the position *before* this for loop
+			it--;
 		}
 	}
-	*/
+	
 	output_stream << "Parse successful" << std::endl;
 	automata_has_data = true;
 
