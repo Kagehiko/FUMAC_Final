@@ -27,6 +27,7 @@ class Automata {
 		
 		//States are stored as ints that represent their index in the state_names vector
 		bool automata_has_data = false;
+		bool automata_has_epsilon_event = false;
 		std::vector<std::string> state_names;
 		int initial_state;
 		std::vector<int> marked_states;

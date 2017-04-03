@@ -110,40 +110,50 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 			break;
 
 		case eTRANSITIONS:
-		{
-			int first_state, event_pos, second_state;
-			std::string event;
+			{
+				int first_state, event_pos, second_state;
+				std::string event;
 
-			transition_str_vector = split(line, ';');
-			if (transition_str_vector.size() != 3) {
-				output_stream << "Error: Invalid transition format (line " << line_number << ")" << std::endl;
+				transition_str_vector = split(line, ';');
+				if (transition_str_vector.size() != 3) {
+					output_stream << "Error: Invalid transition format (line " << line_number << ")" << std::endl;
+				}
+
+				//Check if first substring matches a known state
+				if (!(doesStringExistInVector(state_names, transition_str_vector.at(0), &first_state))) {
+					output_stream << "State " << transition_str_vector.at(0) << " does not match any known states (line " << line_number << ")" << std::endl;
+					clearAutomata();
+					return false;
+				}
+
+				//Check if second substring matches a known event
+				if (!(doesStringExistInVector(events, transition_str_vector.at(1), &event_pos))) {
+					if (transition_str_vector.at(1) == "") {
+						//Epsilon transition
+						if (automata_has_epsilon_event == false) {
+							automata_has_epsilon_event = true;
+							events.push_back("");
+						}
+					} else {
+						output_stream << "Event " << transition_str_vector.at(1) << " does not match any known events (line " << line_number << ")" << std::endl;
+						clearAutomata();
+						return false;
+					}
+					
+				}
+
+				//Check if third substring matches a known state
+				if (!(doesStringExistInVector(state_names, transition_str_vector.at(2), &second_state))) {
+					output_stream << "State " << transition_str_vector.at(2) << " does not match any known states (line " << line_number << ")" << std::endl;
+					clearAutomata();
+					return false;
+				}
+
+				//Store information
+				transitions[{first_state, transition_str_vector.at(1)}].push_back(second_state);
+
 			}
-
-			//Check if first substring matches a known state
-			if (!(doesStringExistInVector(state_names, transition_str_vector.at(0), &first_state))) {
-				output_stream << "State " << transition_str_vector.at(0) << " does not match any known states (line " << line_number << ")" << std::endl;
-				clearAutomata();
-				return false;
-			}
-
-			//Check if second substring matches a known event
-			if (!(doesStringExistInVector(events, transition_str_vector.at(1), &event_pos))) {
-				output_stream << "Event " << transition_str_vector.at(1) << " does not match any known events (line " << line_number << ")" << std::endl;
-				clearAutomata();
-				return false;
-			}
-
-			//Check if third substring matches a known state
-			if (!(doesStringExistInVector(state_names, transition_str_vector.at(2), &second_state))) {
-				output_stream << "State " << transition_str_vector.at(2) << " does not match any known states (line " << line_number << ")" << std::endl;
-				clearAutomata();
-				return false;
-			}
-
-			transitions[{first_state, transition_str_vector.at(1)}].push_back(second_state);
-
-		}
-		break;
+			break;
 
 		case eINITIAL:
 			if (doesStringExistInVector(state_names, line, &initial_state)) {
@@ -159,18 +169,18 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 
 		case eMARKED:
 			//Keep "pos" scope inside these curly brackets
-		{
-			int pos = 0;
-			if (doesStringExistInVector(state_names, line, &pos)) {
-				marked_states.push_back(pos);
-				got_marker_state = true;
-			} else {
-				output_stream << "Error: Marked state " << line << " does not match any known states (line " << line_number << ")" << std::endl;
-				clearAutomata();
-				return false;
+			{
+				int pos = 0;
+				if (doesStringExistInVector(state_names, line, &pos)) {
+					marked_states.push_back(pos);
+					got_marker_state = true;
+				} else {
+					output_stream << "Error: Marked state " << line << " does not match any known states (line " << line_number << ")" << std::endl;
+					clearAutomata();
+					return false;
+				}
 			}
-		}
-		break;
+			break;
 
 		case eNOSTATE:
 			//This means there was trash befor the first label. Just ignore and throw a warning.
@@ -237,9 +247,8 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& output_stre
 			}
 		}
 		if (delete_event == true) {
-			std::cout << "Deleting unused event " << *it << std::endl;
+			output_stream << "Deleting unused event " << *it << std::endl;
 			events.erase(it);
-			std::cout << "Deleted event" << std::endl;
 			//Fix iterator to point to the position *before* this for loop
 			it--;
 		}
@@ -405,7 +414,9 @@ bool Automata::keepStates(std::vector<bool> states_to_keep, std::ostream& stream
 	//Copy all events
 	newAutomataInfo << "EVENTS\r\n";
 	for (int i = 0; i != events.size(); i++) {
-		newAutomataInfo << events.at(i) << "\r\n";
+		if (events.at(i) != "") {
+			newAutomataInfo << events.at(i) << "\r\n";
+		}
 	}
 
 	//Copy all transitions from states marked as false
