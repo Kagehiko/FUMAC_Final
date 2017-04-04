@@ -4,12 +4,6 @@
 #include <vector>
 #include <map>
 
-#ifdef DEBUG_BUILD
-#define D(x) x
-#else
-#define D(x)
-#endif
-
 class Automata {
 	public:
 		bool loadFromFile(std::string path, std::ostream& stream);
@@ -19,6 +13,7 @@ class Automata {
 		void trim(std::ostream& stream);
 
 	private:
+		bool automataHasData(std::ostream& stream);
 		bool CheckCoAc(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path);
 		void clearAutomata();
 		bool keepStates(std::vector<bool> states_to_keep, std::ostream& stream);
@@ -26,8 +21,6 @@ class Automata {
 		std::vector<bool> goThroughAccessibleStates(std::vector<bool> accessible_states, int state);
 		
 		//States are stored as ints that represent their index in the state_names vector
-		bool automata_has_data = false;
-		bool automata_has_epsilon_event = false;
 		std::vector<std::string> state_names;
 		int initial_state;
 		std::vector<int> marked_states;
