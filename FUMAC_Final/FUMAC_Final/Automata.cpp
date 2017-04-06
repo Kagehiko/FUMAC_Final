@@ -114,7 +114,7 @@ void Automata::printAutomataInfo(std::ostream& console_output) {
 		//Go through all events for that state
 		for (int k = 0; k != events.size(); k++) {
 			//Check if a vector for this state and event exists
-			if (transitions.count({ i,events.at(k) })) {
+			if (transitions.count({ i,events.at(k) }) == 1) {
 				//Get an iterator for the vector that has all the possible states for this "state i" and "event k" pair
 				std::vector<int>::iterator it = transitions[{i, events.at(k)}].begin();
 
@@ -222,6 +222,24 @@ void Automata::removeNonCoaccessibleStates(std::ostream& console_output) {
 void Automata::trim(std::ostream& console_output) {
 	this->removeNonAccessibleStates(console_output);
 	this->removeNonCoaccessibleStates(console_output);
+}
+
+
+
+//Performs NFA to DFA conversion
+void Automata::toDFA() {
+
+	std::vector<int> NFA_initial;
+
+	getEClosure(NFA_initial, initial_state);
+
+	std::cout << "Eclosure of the initial state: " << state_names.at(NFA_initial.at(0));
+
+	for (int i = 1; i != NFA_initial.size(); i++) {
+		std::cout << "," <<state_names.at(NFA_initial.at(i));
+	}
+
+	std::cout << std::endl;
 }
 
 
@@ -452,21 +470,19 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 
 	bool delete_event = true;
 	//Delete unused events
-	for (std::vector<std::string>::iterator it = events.begin(); it != events.end(); ++it) {
+	for (int i = 0; i != events.size(); i++) {
 		//Reset variable for each run
 		delete_event = true;
 		//Go thorugh all states and see if the event is used
 		for (int k = 0; k != state_names.size(); k++) {
-			if (transitions.count({ k,*it }) == 1) {
+			if (transitions.count({ k,events.at(i) }) == 1) {
 				delete_event = false;
 				break;
 			}
 		}
 		if (delete_event == true) {
-			console_output << "Deleting unused event " << *it << std::endl;
-			events.erase(it);
-			//Fix iterator to point to the position *before* this for loop
-			it--;
+			console_output << "Deleting unused event " << events.at(i) << std::endl;
+			events.erase(events.begin() + i);
 		}
 	}
 
@@ -477,7 +493,8 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 
 
 
-//Will mark the states' index in a boolean vector as "true" if the state is accessible. If given the state index 0, it will check the whole Automata
+//Will mark the states' index in a boolean vector as "true" if the state is accessible. 
+//If not given the initial state's index, it will instead mark as "true" the states where the given state leads to
 void Automata::goThroughAccessibleStates(std::vector<bool>& accessible_states, int state) {
 
 	//If a function call was made for this state, then the state is accessible
@@ -487,7 +504,7 @@ void Automata::goThroughAccessibleStates(std::vector<bool>& accessible_states, i
 	for (int i = 0; i != events.size(); i++) {
 
 		//If a transition for this event exists, let's go through all possible states where this transition leads to
-		if (transitions.count({ state,events.at(i) })) {
+		if (transitions.count({ state,events.at(i) }) == 1) {
 			
 			for (std::vector<int>::iterator it = transitions[{state, events.at(i)}].begin(); it != transitions[{state, events.at(i)}].end(); ++it) {
 				
@@ -504,6 +521,7 @@ void Automata::goThroughAccessibleStates(std::vector<bool>& accessible_states, i
 
 
 
+//Will mark the states' index in a boolean vector as "true" if the
 bool Automata::goThroughCoAcStates(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path) {
 
 	//Check if this state is marked
@@ -625,3 +643,21 @@ bool Automata::keepStates(std::vector<bool> states_to_keep, std::ostream& consol
 
 }
 
+
+
+//Returns a vector with the E-closure of the given state
+void Automata::getEClosure(std::vector<int>& e_closure_vect,int state) {
+
+	e_closure_vect.push_back(state);
+
+	if (transitions.count({state,""}) == 1) {
+		//Go through all states to which the epsilon transition leads to
+		for (std::vector<int>::iterator it = transitions[{state,""}].begin(); it != transitions[{state,""}].end(); ++it) {
+			//Get the E-closure of state *it only if it is not found in the e_closure_vect.
+			if (std::find(e_closure_vect.begin(), e_closure_vect.end(), *it) == e_closure_vect.end()) {
+				getEClosure(e_closure_vect, *it);
+			}
+		}
+	}
+
+}

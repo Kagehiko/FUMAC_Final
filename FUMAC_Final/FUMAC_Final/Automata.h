@@ -14,6 +14,7 @@ class Automata {
 		void removeNonCoaccessibleStates(std::ostream& console_output = std::stringstream());
 		void trim(std::ostream& console_output = std::stringstream());
 		void clearAutomata(std::ostream& console_output = std::stringstream());
+		void toDFA();
 
 	private:
 		bool automataHasData(std::ostream& console_output);
@@ -21,6 +22,7 @@ class Automata {
 		void goThroughAccessibleStates(std::vector<bool>& accessible_states, int state);
 		bool goThroughCoAcStates(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path);
 		bool keepStates(std::vector<bool> states_to_keep, std::ostream& console_output = std::stringstream());
+		void getEClosure(std::vector<int>& e_closure_vect, int state);
 		
 		
 		//States are stored as ints that represent their index in the state_names vector
