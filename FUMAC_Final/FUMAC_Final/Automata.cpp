@@ -227,21 +227,167 @@ void Automata::trim(std::ostream& console_output) {
 
 
 //Performs NFA to DFA conversion
-void Automata::toDFA() {
+void Automata::toDFA(std::ostream& console_output) {
 
-	std::vector<int> NFA_initial;
+	//This vector will store all the DFA states using vectors of the NFA's indexes
+	std::vector<std::vector<int>> DFA_states;
 
-	getEClosure(NFA_initial, initial_state);
+	//This map will store all transitions between DFA states using the "DFA_states" indexes
+	std::map<std::pair<int, std::string>, std::vector<int> > DFA_transitions;
 
-	std::cout << "Eclosure of the initial state: " << state_names.at(NFA_initial.at(0));
-
-	for (int i = 1; i != NFA_initial.size(); i++) {
-		std::cout << "," <<state_names.at(NFA_initial.at(i));
+	if (automataHasData(console_output) == false) {
+		return;
 	}
 
-	std::cout << std::endl;
+	//Create space for the initial DFA state
+	DFA_states.push_back(std::vector<int>());
+
+	//Get the E-closure of the NFA initial state. This will be the initial state of the DFA
+	getEClosure(DFA_states.at(0), initial_state);
+
+	//All DFA_states MUST BE SORTED! Otherwise it will be impossible to compare the vectors
+	std::sort(DFA_states.at(0).begin(), DFA_states.at(0).end());
+
+	//This vector will store a set of NFA states that corresponds to a single DFA state
+	std::vector<int> NFA_state_set;
+
+	//Go through each DFA state and store the transitions
+	//Remember that the DFA_states size may increase in each iteration
+	for (int i = 0; i != DFA_states.size(); i++) {
+
+		//Go trough all events
+		for (int k = 0; k != events.size(); k++) {
+
+			//Ignore the empty state
+			if (events.at(k) == "") {
+				continue;
+			}
+
+			//Store where this transition leads to
+			NFA_state_set = getNFAStateSet(DFA_states.at(i),events.at(k));
+
+			//If the event lead nowhere, continue to the next DFA state set
+			if (NFA_state_set.size() == 0) {
+				continue;
+			}
+
+			//Add transition
+			DFA_transitions[{i, events.at(k)}] = NFA_state_set;
+
+			//See if this state is new, and if it is, add it to the DFA_states
+			if (std::find(DFA_states.begin(), DFA_states.end(), NFA_state_set) == DFA_states.end()) {
+				DFA_states.push_back(NFA_state_set);
+			}
+
+			//Reset the NFA_state_set for the next iteration
+			NFA_state_set.clear();
+		}
+	}
+
+	std::vector<int> DFA_marked_states;
+
+	//Go trough each DFA state and see if it contains a marked NFA state
+	for (int i = 0; i != DFA_states.size(); i++) {
+		//Go trough each state of the set
+		for (int k = 0; k != DFA_states.at(i).size(); k++) {
+			//Try to find it in the marked_states vector
+			if (std::find(marked_states.begin(), marked_states.end(), DFA_states.at(i).at(k)) != marked_states.end()) {
+				DFA_marked_states.push_back(i);
+				break;
+			}
+		}
+	}
+
+	//Create a stringstream and copy the DFA data to it
+	std::stringstream newAutomataInfo;
+
+	newAutomataInfo << "STATES\r\n";
+
+	for (int i = 0; i != DFA_states.size(); i++) {
+		newAutomataInfo << printDFAState(DFA_states, i) << "\r\n";
+	}
+
+	newAutomataInfo << "EVENTS\r\n";
+
+	for (int i = 0; i != events.size(); i++) {
+		if (events.at(i)!="") {
+			newAutomataInfo << events.at(i) << "\r\n";
+		}
+	}
+
+	newAutomataInfo << "TRANSITIONS\r\n";
+
+	//Go through all DFA_states and events
+	for (int i = 0; i != DFA_states.size(); i++) {
+		for (int k = 0; k != events.size(); k++) {
+			if (DFA_transitions.count({i, events.at(k) }) == 1) {
+				newAutomataInfo << printDFAState(DFA_states, i) << ";" << events.at(k) << ";";
+				
+				//Because the transitions need to be stored as maps with int vectors as values, there is no easy way to print the value
+				newAutomataInfo << "(" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(0));
+				for (int j = 1; j != DFA_transitions.at({ i,events.at(k) }).size(); j++) {
+					newAutomataInfo << "_" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(j));
+				}
+				newAutomataInfo << ")\r\n";
+			}
+		}
+	}
+
+	newAutomataInfo << "INITIAL\r\n";
+	
+	newAutomataInfo << printDFAState(DFA_states, 0) << "\r\n";
+
+	newAutomataInfo << "MARKED\r\n";
+	for (int i = 0; i != DFA_marked_states.size();i++) {
+
+		newAutomataInfo << printDFAState(DFA_states, DFA_marked_states.at(i)) << "\r\n";
+	}
+
+
+	clearAutomata();
+
+	console_output << "Feeding DFA to parser..." << std::endl;
+	parseStream(newAutomataInfo,console_output);
 }
 
+//Returns a formated string of the DFA state
+std::string Automata::printDFAState(std::vector<std::vector<int>> DFA_states, int i) {
+	std::stringstream stream;
+
+	stream << "(" << state_names.at(DFA_states.at(i).at(0));
+	for (int k = 1; k != DFA_states.at(i).size(); k++) {
+		stream << "_" << state_names.at(DFA_states.at(i).at(k));
+	}
+	stream << ")";
+
+	return stream.str();
+}
+
+//Returns the set of NFA states for the given DFA state and event.
+//Note: do NOT call this function for the empty state
+std::vector<int> Automata::getNFAStateSet(std::vector<int> DFA_state, std::string event_to_check) {
+	std::vector<int> NFA_state_set;
+
+	//Go trough all of the states of the set
+	for (int i = 0; i != DFA_state.size(); i++) {
+
+		//If there is a transition, then check where it leads to.
+		if (transitions.count({DFA_state.at(i),event_to_check}) == 1) {
+			//Go trough all transitions for this combination
+			for (int k = 0; k != transitions.at({ DFA_state.at(i),event_to_check }).size(); k++) {
+				//Store the eclosure of each state
+				//Note that the getEClosure function always pushes the eclosure to the given vector
+				//This means that we can iterate for different states and the NFA_state_set will always grow 
+				getEClosure(NFA_state_set, transitions.at({ DFA_state.at(i),event_to_check }).at(k));
+			}
+		}
+	}
+
+	//All state sets must be sorted to allow for the use of "find"
+	std::sort(NFA_state_set.begin(), NFA_state_set.end());
+	
+	return NFA_state_set;
+}
 
 
 //Deletes all automata data
@@ -467,6 +613,11 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 		return false;
 	}
 
+	if (transitions.size() == 0) {
+		console_output << "Error: Automata has no transitions" << std::endl;
+		clearAutomata();
+		return false;
+	}
 
 	bool delete_event = true;
 	//Delete unused events
@@ -483,6 +634,8 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 		if (delete_event == true) {
 			console_output << "Deleting unused event " << events.at(i) << std::endl;
 			events.erase(events.begin() + i);
+			//Correct index
+			i--;
 		}
 	}
 

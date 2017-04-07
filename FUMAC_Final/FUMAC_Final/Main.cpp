@@ -17,10 +17,13 @@ int main() {
 	//my_automata.trim(std::cout);
 
 	my_automata.printAutomataInfo(consoleOutput);
+	
+	my_automata.toDFA(consoleOutput);
+
+	my_automata.printAutomataInfo(consoleOutput);
 
 	std::cout << consoleOutput.str();
 
-	my_automata.toDFA();
 
 	std::cin.get();
 	return 0;
