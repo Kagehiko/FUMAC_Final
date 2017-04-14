@@ -226,6 +226,14 @@ void Automata::trim(std::ostream& console_output) {
 
 
 
+//Deletes all automata data
+void Automata::clearAutomata(std::ostream& console_output) {
+	*this = Automata();
+	console_output << "Automata data deleted" << std::endl;
+}
+
+
+
 //Performs NFA to DFA conversion
 void Automata::toDFA(std::ostream& console_output) {
 
@@ -348,52 +356,6 @@ void Automata::toDFA(std::ostream& console_output) {
 
 	console_output << "Feeding DFA to parser..." << std::endl;
 	parseStream(newAutomataInfo,console_output);
-}
-
-//Returns a formated string of the DFA state
-std::string Automata::printDFAState(std::vector<std::vector<int>> DFA_states, int i) {
-	std::stringstream stream;
-
-	stream << "(" << state_names.at(DFA_states.at(i).at(0));
-	for (int k = 1; k != DFA_states.at(i).size(); k++) {
-		stream << "_" << state_names.at(DFA_states.at(i).at(k));
-	}
-	stream << ")";
-
-	return stream.str();
-}
-
-//Returns the set of NFA states for the given DFA state and event.
-//Note: do NOT call this function for the empty state
-std::vector<int> Automata::getNFAStateSet(std::vector<int> DFA_state, std::string event_to_check) {
-	std::vector<int> NFA_state_set;
-
-	//Go trough all of the states of the set
-	for (int i = 0; i != DFA_state.size(); i++) {
-
-		//If there is a transition, then check where it leads to.
-		if (transitions.count({DFA_state.at(i),event_to_check}) == 1) {
-			//Go trough all transitions for this combination
-			for (int k = 0; k != transitions.at({ DFA_state.at(i),event_to_check }).size(); k++) {
-				//Store the eclosure of each state
-				//Note that the getEClosure function always pushes the eclosure to the given vector
-				//This means that we can iterate for different states and the NFA_state_set will always grow 
-				getEClosure(NFA_state_set, transitions.at({ DFA_state.at(i),event_to_check }).at(k));
-			}
-		}
-	}
-
-	//All state sets must be sorted to allow for the use of "find"
-	std::sort(NFA_state_set.begin(), NFA_state_set.end());
-	
-	return NFA_state_set;
-}
-
-
-//Deletes all automata data
-void Automata::clearAutomata(std::ostream& console_output) {
-	*this = Automata();
-	console_output << "Automata data deleted" << std::endl;
 }
 
 
@@ -813,4 +775,47 @@ void Automata::getEClosure(std::vector<int>& e_closure_vect,int state) {
 		}
 	}
 
+}
+
+
+
+//Returns the set of NFA states for the given DFA state and event.
+//Note: do NOT call this function for the epsilon event
+std::vector<int> Automata::getNFAStateSet(std::vector<int> DFA_state, std::string event_to_check) {
+	std::vector<int> NFA_state_set;
+
+	//Go trough all of the states of the set
+	for (int i = 0; i != DFA_state.size(); i++) {
+
+		//If there is a transition, then check where it leads to.
+		if (transitions.count({ DFA_state.at(i),event_to_check }) == 1) {
+			//Go trough all transitions for this combination
+			for (int k = 0; k != transitions.at({ DFA_state.at(i),event_to_check }).size(); k++) {
+				//Store the eclosure of each state
+				//Note that the getEClosure function always pushes the eclosure to the given vector
+				//This means that we can iterate for different states and the NFA_state_set will always grow 
+				getEClosure(NFA_state_set, transitions.at({ DFA_state.at(i),event_to_check }).at(k));
+			}
+		}
+	}
+
+	//All state sets must be sorted to allow for the use of "find"
+	std::sort(NFA_state_set.begin(), NFA_state_set.end());
+
+	return NFA_state_set;
+}
+
+
+
+//Returns a formated string of the DFA state
+std::string Automata::printDFAState(std::vector<std::vector<int>> DFA_states, int i) {
+	std::stringstream stream;
+
+	stream << "(" << state_names.at(DFA_states.at(i).at(0));
+	for (int k = 1; k != DFA_states.at(i).size(); k++) {
+		stream << "_" << state_names.at(DFA_states.at(i).at(k));
+	}
+	stream << ")";
+
+	return stream.str();
 }
