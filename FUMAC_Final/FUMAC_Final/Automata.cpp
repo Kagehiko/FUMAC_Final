@@ -69,21 +69,25 @@ void Automata::printAutomataInfo(std::ostream& console_output) {
 		return;
 	}
 
-	console_output << std::endl << std::endl << "G=(X,E,T,f,X0,Xm)" << std::endl;
+	console_output << "G=(X,E,T,f,X0,Xm)" << std::endl << std::endl;
 
 	//States
 	console_output << "X={" << state_names.at(0);
 	for (std::vector<std::string>::iterator it = state_names.begin() + 1; it != state_names.end(); ++it) {
 		console_output << "," << *it;
 	}
-	console_output << "}" << std::endl;
+	console_output << "}" << std::endl << std::endl;
 
 	//Events
 	console_output << "E={" << events.at(0);
 	for (std::vector<std::string>::iterator it = events.begin() + 1; it != events.end(); ++it) {
-		console_output << "," << *it;
+		if (*it=="") {
+			console_output << "," << "{}";
+		} else {
+			console_output << "," << *it;
+		}
 	}
-	console_output << "}" << std::endl;
+	console_output << "}" << std::endl << std::endl;
 
 	//Active events per state
 
@@ -101,12 +105,19 @@ void Automata::printAutomataInfo(std::ostream& console_output) {
 				if (more_than_one == true) {
 					console_output << ",";
 				}
-				console_output << events.at(k);
+				if (events.at(k) == "") {
+					console_output << "{}";
+				} else {
+					console_output << events.at(k);
+				}
+				
 				more_than_one = true;
 			}
 		}
 		console_output << "}" << std::endl;
 	}
+
+	console_output << std::endl;
 
 	//Transitions
 	//Go through all states
@@ -118,7 +129,12 @@ void Automata::printAutomataInfo(std::ostream& console_output) {
 				//Get an iterator for the vector that has all the possible states for this "state i" and "event k" pair
 				std::vector<int>::iterator it = transitions[{i, events.at(k)}].begin();
 
-				console_output << "f(" << state_names.at(i) << "," << events.at(k) << ") = {" << state_names.at(*it);
+				if (events.at(k) == "") {
+					console_output << "f(" << state_names.at(i) << "," << "{}" << ") = {" << state_names.at(*it);
+				} else {
+					console_output << "f(" << state_names.at(i) << "," << events.at(k) << ") = {" << state_names.at(*it);
+				}
+
 				it++;
 				//If there is more than 1 transition for this state and event, go through all of them
 				while (it != transitions[{i, events.at(k)}].end()) {
@@ -131,23 +147,23 @@ void Automata::printAutomataInfo(std::ostream& console_output) {
 	}
 
 	//Initial state
-	console_output << "X0=" << state_names.at(initial_state) << std::endl;
+	console_output << std::endl << "X0=" << state_names.at(initial_state) << std::endl << std::endl;
 
 	//Marked states
 	console_output << "Xm={" << state_names.at(marked_states.at(0));
 	for (std::vector<int>::iterator it = marked_states.begin() + 1; it != marked_states.end(); ++it) {
 		console_output << "," << state_names.at(*it);
 	}
-	console_output << "}" << std::endl << std::endl << std::endl;
+	console_output << "}" << std::endl;
 }
 
 
 
 //Removes all non-accessible states from automata
-void Automata::removeNonAccessibleStates(std::ostream& console_output) {
+bool Automata::removeNonAccessibleStates(std::ostream& console_output) {
 
 	if (automataHasData(console_output) == false) {
-		return;
+		return false;
 	}
 
 	//Each position corresponds to the state index, and a 1 indicates that the state is accessible.
@@ -172,20 +188,20 @@ void Automata::removeNonAccessibleStates(std::ostream& console_output) {
 	console_output << "}" << std::endl;
 	console_output << "Deleting all non-accessible states..." << std::endl;
 
-	keepStates(accessible_states, console_output);
+	return keepStates(accessible_states, console_output);
 }
 
 
 
 //Removes all non-coaccessible states from automata
-void Automata::removeNonCoaccessibleStates(std::ostream& console_output) {
+bool Automata::removeNonCoaccessibleStates(std::ostream& console_output) {
 
 	std::vector<bool> coaccessible_states(state_names.size(), false);
 	std::vector<bool> result_is_known(state_names.size(), false);
 	std::vector<int> path;
 
 	if (automataHasData(console_output) == false) {
-		return;
+		return false;
 	}
 
 	//Go through all states
@@ -213,15 +229,18 @@ void Automata::removeNonCoaccessibleStates(std::ostream& console_output) {
 	console_output << "}" << std::endl;
 	console_output << "Deleting all non-coaccessible states..." << std::endl;
 
-	keepStates(coaccessible_states, console_output);
+	return keepStates(coaccessible_states, console_output);
 }
 
 
 
 //Removes both non-accessible and non-coaccessible states
-void Automata::trim(std::ostream& console_output) {
-	this->removeNonAccessibleStates(console_output);
-	this->removeNonCoaccessibleStates(console_output);
+bool Automata::trim(std::ostream& console_output) {
+	if (this->removeNonAccessibleStates(console_output) != true) {
+		return false;
+	}
+	
+	return this->removeNonCoaccessibleStates(console_output);
 }
 
 
@@ -360,7 +379,97 @@ void Automata::toDFA(std::ostream& console_output) {
 
 
 
-//Private methods
+//Returns true if the automata is a DFA
+bool Automata::isDFA(std::ostream& console_output) {
+
+	if (automataHasData(console_output) == false) {
+		return false;
+	}
+
+	//Search for the epsilon transition
+	if (std::find(events.begin(), events.end(), "") != events.end()) {
+		console_output << "The automata is non-deterministic";
+		return false;
+	}
+
+	//Search for more than one destination state for the same state-event pair
+	for (int i = 0; i != state_names.size();i++) {
+		for (int k = 0; k != events.size();k++) {
+			if (transitions.count({ i,events.at(k) }) == 1) {
+				if (transitions.at({ i,events.at(k) }).size() > 1) {
+					console_output << "The automata is non-deterministic";
+					return false;
+				}
+			}
+		}
+	}
+
+	console_output << "The automata is deterministic";
+	return true;
+}
+
+
+
+//Saves current Automata to a file
+bool Automata::saveToFile(std::string path, std::ostream& console_output) {
+	
+	if (automataHasData(console_output) == false) {
+		return false;
+	}
+
+	std::ofstream file;
+
+	file.open(path, std::ios::binary);
+
+	if (!file.is_open()) {
+		console_output << "Couldn't save file to specified path" << std::endl;
+		return false;
+	}
+
+	//Note: see function "keep states" for comments on how this works
+	//TODO: refactor code to reuse the keep states code
+
+	file << "STATES\r\n";
+
+	for (int i = 0; i != state_names.size(); i++) {
+		file << state_names.at(i) << "\r\n";
+	}
+
+	file << "EVENTS\r\n";
+	for (int i = 0; i != events.size(); i++) {
+		if (events.at(i) != "") {
+			file << events.at(i) << "\r\n";
+		}
+	}
+
+	file << "TRANSITIONS\r\n";
+
+	for (int i = 0; i != state_names.size(); i++) {
+		for (int k = 0; k != events.size(); k++) {
+			if (transitions.count({ i,events.at(k) }) == 1) {
+				for (std::vector<int>::iterator it = transitions[{i, events.at(k)}].begin(); it != transitions[{i, events.at(k)}].end(); ++it) {
+						file << state_names.at(i) << ";" << events.at(k) << ";" << state_names.at(*it) << "\r\n";
+				}
+			}
+		}
+	}
+
+	file << "INITIAL\r\n";
+
+	file << state_names.at(initial_state) << "\r\n";
+
+	file << "MARKED\r\n";
+
+	for (int i = 0; i != marked_states.size(); i++) {
+		file << state_names.at(marked_states.at(i)) << "\r\n";
+	}
+
+	file.close();
+
+	console_output << "Save successful" << std::endl;
+}
+
+
 
 //Checks if there is any data loaded into the automata
 bool Automata::automataHasData(std::ostream& console_output) {
@@ -373,6 +482,8 @@ bool Automata::automataHasData(std::ostream& console_output) {
 }
 
 
+
+//Private methods
 
 //Enumerator for the parser
 enum Parser_state_enum {

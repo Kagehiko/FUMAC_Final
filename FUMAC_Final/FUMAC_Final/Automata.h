@@ -10,14 +10,16 @@ class Automata {
 	public:
 		bool loadFromFile(std::string path, std::ostream& console_output = std::stringstream());
 		void printAutomataInfo(std::ostream& console_output);
-		void removeNonAccessibleStates(std::ostream& console_output = std::stringstream());
-		void removeNonCoaccessibleStates(std::ostream& console_output = std::stringstream());
-		void trim(std::ostream& console_output = std::stringstream());
+		bool removeNonAccessibleStates(std::ostream& console_output = std::stringstream());
+		bool removeNonCoaccessibleStates(std::ostream& console_output = std::stringstream());
+		bool trim(std::ostream& console_output = std::stringstream());
 		void clearAutomata(std::ostream& console_output = std::stringstream());
 		void toDFA(std::ostream& console_output = std::stringstream());
+		bool isDFA(std::ostream& console_output = std::stringstream());
+		bool saveToFile(std::string path, std::ostream& console_output);
+		bool automataHasData(std::ostream& console_output = std::stringstream());
 
 	private:
-		bool automataHasData(std::ostream& console_output = std::stringstream());
 		bool parseStream(std::istream& input_stream, std::ostream& console_output = std::stringstream());
 		void goThroughAccessibleStates(std::vector<bool>& accessible_states, int state);
 		bool goThroughCoAcStates(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path);
