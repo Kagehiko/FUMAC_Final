@@ -54,6 +54,8 @@ bool Automata::loadFromFile(std::string path, std::ostream& console_output) {
 		return false;
 	}
 
+	clearAutomata();
+
 	parseStream(file, console_output);
 
 	file.close();
@@ -256,6 +258,11 @@ void Automata::clearAutomata(std::ostream& console_output) {
 //Performs NFA to DFA conversion
 void Automata::toDFA(std::ostream& console_output) {
 
+	if (isDFA()) {
+		console_output << "Automata already is deterministic";
+		return;
+	}
+
 	//This vector will store all the DFA states using vectors of the NFA's indexes
 	std::vector<std::vector<int>> DFA_states;
 
@@ -373,7 +380,7 @@ void Automata::toDFA(std::ostream& console_output) {
 
 	clearAutomata();
 
-	console_output << "Feeding DFA to parser..." << std::endl;
+	console_output << "Feeding NFA to parser..." << std::endl;
 	parseStream(newAutomataInfo,console_output);
 }
 
