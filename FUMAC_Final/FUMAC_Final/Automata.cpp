@@ -206,11 +206,14 @@ bool Automata::removeNonCoaccessibleStates(std::ostream& console_output) {
 		return false;
 	}
 
-	//Go through all states
-	for (int i = 0; i != state_names.size(); i++) {
-		//If we already know if state "i" is coaccessible, then skip it
-		if (result_is_known.at(i) != true) {
-			goThroughCoAcStates(i, coaccessible_states, result_is_known, path);
+	//While some results are still unkown
+	while (std::find(result_is_known.begin(), result_is_known.end(), false) != result_is_known.end()) {
+		//Go through all states
+		for (int i = 0; i != state_names.size(); i++) {
+			//If we already know if state "i" is coaccessible, then skip it
+			if (result_is_known.at(i) != true) {
+				goThroughCoAcStates(i, coaccessible_states, result_is_known, path);
+			}
 		}
 	}
 
@@ -259,12 +262,12 @@ void Automata::clearAutomata(std::ostream& console_output) {
 void Automata::toDFA(std::ostream& console_output) {
 
 	if (isDFA()) {
-		console_output << "Automata already is deterministic";
+		console_output << "Automata is already deterministic";
 		return;
 	}
 
 	trim();
-
+	
 	//This vector will store all the DFA states using vectors of the NFA's indexes
 	std::vector<std::vector<int>> DFA_states;
 
@@ -764,6 +767,11 @@ void Automata::goThroughAccessibleStates(std::vector<bool>& accessible_states, i
 //Will mark the states' index in a boolean vector as "true" if the
 bool Automata::goThroughCoAcStates(int state, std::vector<bool>& coaccessible_states, std::vector<bool>& result_is_known, std::vector<int> path) {
 
+	//If a state tried to go to a path that was already taken
+	//then if everything else fails, it is not possible to know
+	//if that path would have lead to a coacessible state
+	bool was_blocked_by_path = false;
+
 	//Check if this state is marked
 	//Note: one could make all marked states in the "result_is_known" and "coaccessible_states" vectors true
 	//before starting the recursive calls to this function
@@ -799,6 +807,7 @@ bool Automata::goThroughCoAcStates(int state, std::vector<bool>& coaccessible_st
 				}
 				else if (std::find(path.begin(), path.end(), *it) != path.end()) {
 					//If we already went into this "*it" state and we have no information on it, we've hit a loop and can't do anything about it
+					was_blocked_by_path = true;
 					continue;
 				}
 				else {
@@ -814,7 +823,9 @@ bool Automata::goThroughCoAcStates(int state, std::vector<bool>& coaccessible_st
 		}
 	}
 
-	result_is_known.at(state) = true;
+	if (was_blocked_by_path == false) {
+		result_is_known.at(state) = true;
+	}
 	//If the code gets here, we went through all possible transitions for this state and no one lead us to a coaccessible state, so this state is not coaccessible
 	return false;
 }
