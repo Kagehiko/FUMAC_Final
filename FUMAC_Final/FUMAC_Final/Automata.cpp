@@ -294,7 +294,7 @@ void Automata::toDFA(std::ostream& console_output) {
 		//Go trough all events
 		for (int k = 0; k != events.size(); k++) {
 
-			//Ignore the empty state
+			//Ignore the epsilon event
 			if (events.at(k) == "") {
 				continue;
 			}
@@ -360,11 +360,16 @@ void Automata::toDFA(std::ostream& console_output) {
 				newAutomataInfo << printDFAState(DFA_states, i) << ";" << events.at(k) << ";";
 				
 				//Because the transitions need to be stored as maps with int vectors as values, there is no easy way to print the value
-				newAutomataInfo << "(" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(0));
-				for (int j = 1; j != DFA_transitions.at({ i,events.at(k) }).size(); j++) {
-					newAutomataInfo << "_" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(j));
+				if (DFA_transitions.at({ i,events.at(k)}).size() == 1) {
+					//Make sure the name is printed in a consistent way (same way as in printDFAState(...))
+					newAutomataInfo << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(0)) << "\r\n";
+				} else {
+					newAutomataInfo << "(" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(0));
+					for (int j = 1; j != DFA_transitions.at({ i,events.at(k) }).size(); j++) {
+						newAutomataInfo << "_" << state_names.at(DFA_transitions.at({ i,events.at(k) }).at(j));
+					}
+					newAutomataInfo << ")\r\n";
 				}
-				newAutomataInfo << ")\r\n";
 			}
 		}
 	}
@@ -921,6 +926,10 @@ std::vector<int> Automata::getNFAStateSet(std::vector<int> DFA_state, std::strin
 
 	//All state sets must be sorted to allow for the use of "find"
 	std::sort(NFA_state_set.begin(), NFA_state_set.end());
+
+	//If two NFA states (in the DFA_state vector) lead to the same NFA state
+	//duplicate values can occur, so we need to remove them
+	NFA_state_set.erase(std::unique(NFA_state_set.begin(), NFA_state_set.end()), NFA_state_set.end());
 
 	return NFA_state_set;
 }
