@@ -263,6 +263,8 @@ void Automata::toDFA(std::ostream& console_output) {
 		return;
 	}
 
+	trim();
+
 	//This vector will store all the DFA states using vectors of the NFA's indexes
 	std::vector<std::vector<int>> DFA_states;
 
@@ -929,11 +931,15 @@ std::vector<int> Automata::getNFAStateSet(std::vector<int> DFA_state, std::strin
 std::string Automata::printDFAState(std::vector<std::vector<int>> DFA_states, int i) {
 	std::stringstream stream;
 
-	stream << "(" << state_names.at(DFA_states.at(i).at(0));
-	for (int k = 1; k != DFA_states.at(i).size(); k++) {
-		stream << "_" << state_names.at(DFA_states.at(i).at(k));
+	if (DFA_states.at(i).size() == 1) {
+		stream << state_names.at(DFA_states.at(i).at(0));
+	} else {
+		stream << "(" << state_names.at(DFA_states.at(i).at(0));
+		for (int k = 1; k != DFA_states.at(i).size(); k++) {
+			stream << "_" << state_names.at(DFA_states.at(i).at(k));
+		}
+		stream << ")";
 	}
-	stream << ")";
 
 	return stream.str();
 }
