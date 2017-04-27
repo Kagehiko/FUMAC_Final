@@ -618,7 +618,12 @@ bool Automata::parseStream(std::istream& input_stream, std::ostream& console_out
 			}
 
 			//Store information
-			transitions[{first_state, transition_str_vector.at(1)}].push_back(second_state);
+			if (std::find(transitions[{first_state, transition_str_vector.at(1)}].begin(), transitions[{first_state, transition_str_vector.at(1)}].end(), second_state) != transitions[{first_state, transition_str_vector.at(1)}].end()) {
+				console_output << "Warning: Repeated transition ignored (line " << line_number << ")" << std::endl;
+			}
+			else {
+				transitions[{first_state, transition_str_vector.at(1)}].push_back(second_state);
+			}
 
 		}
 		break;
